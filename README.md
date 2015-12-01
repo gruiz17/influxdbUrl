@@ -3,6 +3,8 @@
 This is a helper project to let frontend code connect to backend influxdb databse.
 By default, this service is bind to port 18080
 
+follow the instructions here to install go on your environment:
+https://golang.org/doc/install
 
 ```
 go install influxdbUrl/
