@@ -11,7 +11,7 @@ import (
 )
 
 const(
-	influxDbTag = "/hello"
+	influxDbTag = "/influxdb"
 	portNum = "8080"
 	sqlTag = "q="
 )
@@ -132,11 +132,6 @@ func readInfluxDb(command string) (res []client.Result, err error) {
 		fmt.Println("no password")
 		return res, nil
 	}
-
-	/*
-	 * 1. if it's delete or drop or remove
-	 * 2. add/create is not allowed
-	 */
 
 	// Make client
 	c, err := client.NewHTTPClient(client.HTTPConfig{
