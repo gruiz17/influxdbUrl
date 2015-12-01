@@ -12,7 +12,7 @@ import (
 
 const(
 	influxDbTag = "/influxdb"
-	portNum = "8080"
+	portNum = "18080"
 	sqlTag = "q="
 )
 

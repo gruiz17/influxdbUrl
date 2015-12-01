@@ -1,7 +1,7 @@
 # influxdbUrl
 
 This is a helper project to let frontend code connect to backend influxdb databse.
-By default, this service is bind to port 8080
+By default, this service is bind to port 18080
 
 http syntax:
 ```
