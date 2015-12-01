@@ -138,21 +138,17 @@ func readInfluxDb(command string) (res []client.Result, err error) {
 	 * 2. add/create is not allowed
 	 */
 
-	fmt.Println("I'm here")
 	// Make client
 	c, err := client.NewHTTPClient(client.HTTPConfig{
 		Addr: urlAddr,
 		Username: m["u"][0],
 		Password: m["p"][0],
 	})
-	fmt.Println("I'm here2")
 	if err != nil {
 		fmt.Println("Error connecting InfluxDB Client: ", err.Error())
 		return res, nil
 	}
-	fmt.Println("I'm here4")
 	defer c.Close()
-	fmt.Println("I'm here5")
 	
 	q := client.NewQuery(sqlInput, tableName, "ns")
 	if response, err := c.Query(q);  err == nil{
@@ -163,6 +159,5 @@ func readInfluxDb(command string) (res []client.Result, err error) {
 		fmt.Println(response.Results)
 		res = response.Results
 	}
-	fmt.Println("I'm here6")
 	return res, nil
 }
