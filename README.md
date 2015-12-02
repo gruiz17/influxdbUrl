@@ -10,6 +10,8 @@ https://golang.org/doc/install
 go install influxdbUrl/
 go run influxdbUrl/influxDBUrl.go
 ```
+Note: because this program use current working path for config file, it can only work correctly using the above relative path. Do not run it from a different path
+
 
 http syntax:
 ```
