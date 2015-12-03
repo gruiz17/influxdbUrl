@@ -11,16 +11,18 @@ https://golang.org/doc/install
 build all go file in influxdbUrl project
 ```
 go install influxdbUrl/
-
 ```
 
 If you have a username and password to encrypt.
 
 ```
-go run influxdbUrl/encryptionGenerator.go ${YOUR_USER_NAME}
-
+go run influxdbUrl/encryptionGenerator.go ${YOUR_USERNAME}
+go run influxdbUrl/encryptionGenerator.go ${YOUR_PASSWORD}
 ```
-This will generate a encryted version of your input string
+This will generate a encryted version of your username and password
+
+Copy and paste the result generated from the above program to encryptionGenerator.config
+
 
 Use the following command to start the backend service
 ```
