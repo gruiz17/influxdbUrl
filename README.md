@@ -6,10 +6,27 @@ By default, this service is bind to port 18080
 follow the instructions here to install go on your environment:
 https://golang.org/doc/install
 
+
+
+build all go file in influxdbUrl project
 ```
 go install influxdbUrl/
-go run influxdbUrl/influxDBUrl.go
+
 ```
+
+If you have a username and password to encrypt.
+
+```
+go run influxdbUrl/encryptionGenerator.go ${YOUR_USER_NAME}
+
+```
+This will generate a encryted version of your input string
+
+Use the following command to start the backend service
+```
+go run influxdbUrl/influxDBUrl2.go
+```
+
 Note: because this program use current working path for config file, it can only work correctly using the above relative path. Do not run it from a different path
 
 
