@@ -1,7 +1,7 @@
 package main
 
 import (
-    "bufio"
+	"bufio"
 	"fmt"
 	"log"
 	"strings"
@@ -12,9 +12,9 @@ import (
 	"crypto/aes"
 	"encoding/hex"
 	"crypto/cipher"
-    "errors"
-    "os"
-    "path/filepath"
+	"errors"
+	"os"
+	"path/filepath"
 )
 
 const(
@@ -122,11 +122,11 @@ func readInfluxDb(command string) (res []client.Result, err error) {
 	}
 	/************/
 
-    credential,err := getCredentials()
+	credential,err := getCredentials()
 
-    if(err == nil){
-    	return res,err
-    }
+	if(err == nil){
+		return res,err
+	}
 
 	//test username and pw
 
@@ -190,51 +190,51 @@ func decypher(command string) (s string,err error){
 }
 
 func getCredentials() (credential []string,err error) {
-    credential =  make([]string, 2)
-    absPath, _ := filepath.Abs("influxdbUrl/credential.config")
-    file, err := os.Open(absPath)
-    if err != nil {
-        log.Fatal(err)
-    }
-    defer file.Close()
+	credential =  make([]string, 2)
+	absPath, _ := filepath.Abs("influxdbUrl/credential.config")
+	file, err := os.Open(absPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
 
-    scanner := bufio.NewScanner(file)
-    username := ""
-    password := ""
-    for scanner.Scan() {
-        line := scanner.Text()
-        if strings.Contains(line, "u=") {
-            username = line[2:]
-            continue;
-        }
-        if strings.Contains(line, "p=") {
-            password = line[2:]
-            continue;
-        }
-    }
-    if err := scanner.Err(); err != nil {
-        log.Fatal(err)
-    }
+	scanner := bufio.NewScanner(file)
+	username := ""
+	password := ""
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, "u=") {
+			username = line[2:]
+			continue;
+		}
+		if strings.Contains(line, "p=") {
+			password = line[2:]
+			continue;
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
 
-    //test username and pw
-    if len(username) <= 0 {
-        fmt.Println("no username")
-        return credential,errors.New("no username")
-    }
+	//test username and pw
+	if len(username) <= 0 {
+		fmt.Println("no username")
+		return credential,errors.New("no username")
+	}
 
-    realUsername,_ := decypher(username)
+	realUsername,_ := decypher(username)
 
-    fmt.Println(realUsername)
+	fmt.Println(realUsername)
 
-    if len(password) <= 0 {
-        fmt.Println("no password")
-        return credential,errors.New("no password")
-    }
-    realPassword,_ := decypher(password)
-    fmt.Println(realPassword)
+	if len(password) <= 0 {
+		fmt.Println("no password")
+		return credential,errors.New("no password")
+	}
+	realPassword,_ := decypher(password)
+	fmt.Println(realPassword)
 
-    credential[0] = realUsername
-    credential[1] = realPassword
-    return credential,nil
+	credential[0] = realUsername
+	credential[1] = realPassword
+	return credential,nil
 }
 
