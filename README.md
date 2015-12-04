@@ -34,14 +34,8 @@ Note: because this program use current working path for config file, it can only
 
 http syntax:
 ```
-http://localhost:18080/influxdb/curl%20-G%20%27${Your URL}?u=${DATABASE USER NAME}&p={DATABASE PASSWORD}&pretty=true%27%20--data-urlencode%20"q=${sql command}"
+curl -H "Content-Type: application/json" -X POST -d "{\"pod_id\": \"sdfd\", \"timeStart\": \"2015-11-03\",\"timeEnd\": \"2015-11-04\",\"limit\": 1000,\"metric\": \"uptime_ms_cumulative\" }"    http://localhost:18080/influxdbUrl
 ```
-
-sample link:
-```
-http://localhost:18080/influxdb/curl%20-G%20%27abc.com/x/y?u=uname&p=pw&pretty=true%27%20--data-urlencode%20"q=select%20*%20from%20pod_id%20limit%201"
-```
-
 
 Note: after the above config, the last step is to change the file permmision of credential.config to read only
 ```
