@@ -21,7 +21,7 @@ go run influxdbUrl/encryptionGenerator.go ${YOUR_PASSWORD}
 ```
 This will generate a encryted version of your username and password
 
-Copy and paste the result generated from the above program to encryptionGenerator.config
+Copy and paste the result generated from the above program to credential.config
 
 
 Use the following command to start the backend service
@@ -40,4 +40,10 @@ http://localhost:18080/influxdb/curl%20-G%20%27${Your URL}?u=${DATABASE USER NAM
 sample link:
 ```
 http://localhost:18080/influxdb/curl%20-G%20%27abc.com/x/y?u=uname&p=pw&pretty=true%27%20--data-urlencode%20"q=select%20*%20from%20pod_id%20limit%201"
+```
+
+
+Note: after the above config, the last step is to change the file permmision of credential.config to read only
+```
+chmod 444 credential.config
 ```

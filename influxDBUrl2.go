@@ -6,125 +6,95 @@ import (
 	"log"
 	"strings"
 	"net/http"
-	"net/url"
 	"github.com/influxdb/influxdb/client/v2"
-	"github.com/gorilla/mux"
 	"crypto/aes"
 	"encoding/hex"
+	"encoding/json"
 	"crypto/cipher"
 	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
+	"time"
 )
 
 const(
-	influxDbTag = "/influxdb"
+	influxDbTag = "/influxdbUrl"
 	portNum = "18080"
-	sqlTag = "q="
+	defaultStartTime = "1970-01-01 00:00:00.000"
+	timeLengthIndex int = 19
+	timeStampSuffix = ".000"
 )
+
+//Note: parameter name in this struct needs to start with upper case letter
+//Pod_id and Metric are required fields, the rest are optional
+type json_struct struct {
+	Pod_id string
+	TimeStart string
+	TimeEnd string
+	Limit int
+	Metric string
+}
 
 var commonIV = []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f}
 
 
 func main() {
-
-	router := mux.NewRouter()
-	router.HandleFunc(influxDbTag + "/{rest:.*}", influxDBHandler).Methods("GET")
-	log.Fatal(http.ListenAndServe(":" + portNum, router))
+	http.HandleFunc(influxDbTag, influxDBHandler)
+	log.Fatal(http.ListenAndServe(":"+portNum, nil))
 }
 
-func influxDBHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("Responsing to /influxDbTag request")
-	log.Println(r.UserAgent())
-
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintln(w, "your influxDB result:", r)
-
-	t := r.URL.String()
-	t = t [7:len(t)]
-	fmt.Fprintln(w, "t=" + t)
-
-	x,_ := url.QueryUnescape(t)
-	//add a '/' after http:/
-	if(strings.Contains(x, "http:/") &&  !strings.Contains(x, "http://")){
-		slashIndex := strings.Index(x, "http:/") + 5
-		x = x[:slashIndex] + "/" + x[slashIndex:]
-	}
-	readInfluxDb(x)
-}
-
-
-func readInfluxDb(command string) (res []client.Result, err error) {
-	input := command
-	if(strings.Contains(input, "http:/") &&  !strings.Contains(input, "http://")){
-		slashIndex := strings.Index(input, "http:/") + 5
-		input = input[:slashIndex] + "/" + input[slashIndex:]
-	}
-	fmt.Println("input=" + input)
-	elem := strings.Split(input, " ")
-	urlInput := ""
-	sqlInput := ""
-	for k, _ := range elem{
-		if strings.HasPrefix(elem[k], "'http"){
-			urlInput = elem[k][1:len(elem[k]) - 1]
-			fmt.Println(urlInput)
-			break;
-		}
-	}
-
-	if(strings.Contains(input, sqlTag)){
-		sqlInput = input [strings.Index(input, sqlTag)+2:len(input) - 1]
-		fmt.Println(sqlInput)
-	}
-
-	if len(urlInput) <= 0 {
-		fmt.Println("invalid url")
-		return res, nil
-	}
-
-	if len(sqlInput) <= 0 {
-		fmt.Println("invalid sql")
-		return res, nil
-	}
-
-	sqlElem := strings.Split(sqlInput, " ")
-
-	tableName := ""
-	for k, _ := range sqlElem{
-		if strings.HasPrefix(sqlElem[k], "from"){
-			tableName = sqlElem[k+1]
-			fmt.Println(tableName)
-			break;
-		}
-	}
-
-	if len(tableName) <= 0 {
-		fmt.Println("cannot find table name")
-		return res, nil
-	}
-
-	urlAddr := urlInput [:strings.Index(urlInput, "?")]
-	fmt.Println("urlAddr:" + urlAddr)
-
-	u, err := url.Parse(urlInput)
+func influxDBHandler(rw http.ResponseWriter, req *http.Request) {
+	decoder := json.NewDecoder(req.Body)
+	var t json_struct   
+	err := decoder.Decode(&t)
 	if err != nil {
-		log.Fatal(err)
+		return
 	}
 
-	m, _ := url.ParseQuery(u.RawQuery)
+	log.Println(t.Pod_id)
+	log.Println(t.TimeStart)
+	log.Println(t.TimeEnd)
+	log.Println(t.Limit)
+	log.Println(t.Metric)
 
-	//debug
-	/************/
-	fmt.Println(m)
+	podId := t.Pod_id
+	startTime := t.TimeStart
+	endTime := t.TimeEnd
+	limitNum := strconv.Itoa(t.Limit)
+	metrics := t.Metric
 
-	for k, _ := range m {
-		fmt.Println(k,m[k][0])
+	if len(metrics) <= 0 {
+		log.Println("no metrics")
+		return
 	}
-	/************/
+	if len(podId) <= 0 {
+		log.Println("no pod_id")
+		return
+	}
 
+	if len(startTime) <= 0 {
+		startTime = defaultStartTime
+	}
+
+	if len(endTime) <= 0 {
+		x := time.Now().String()
+		endTime = x[:timeLengthIndex] + timeStampSuffix
+	}
+	sql := "SELECT * FROM '" + metrics + "' WHERE time >= '" + startTime + "' AND time <='" + endTime + "' AND pod_id='" + podId + "'"
+	if len(limitNum) <= 0 {
+		sql += " LIMIT " +  limitNum
+	}
+
+	log.Println(sql)
+	readInfluxDb(sql, metrics)
+
+}
+
+func readInfluxDb(command string, metrics string) (res []client.Result, err error) {
 	credential,err := getCredentials()
 
-	if(err == nil){
+	if(err != nil){
 		return res,err
 	}
 
@@ -132,17 +102,21 @@ func readInfluxDb(command string) (res []client.Result, err error) {
 
 	if len(credential[0]) <= 0 {
 		fmt.Println("no username")
-		return res, nil
+		return res, errors.New("no username")
 	}
 
 	if len(credential[1]) <= 0 {
 		fmt.Println("no password")
-		return res, nil
+		return res, errors.New("no password")
 	}
 
+	if len(credential[2]) <= 0 {
+		fmt.Println("no dbURL")
+		return res, errors.New("no dbURL")
+	}
 	// Make client
 	c, err := client.NewHTTPClient(client.HTTPConfig{
-		Addr: urlAddr,
+		Addr: credential[2],
 		Username: credential[0],
 		Password: credential[1],
 	})
@@ -152,11 +126,11 @@ func readInfluxDb(command string) (res []client.Result, err error) {
 	}
 	defer c.Close()
 	
-	q := client.NewQuery(sqlInput, tableName, "ns")
+	q := client.NewQuery(command, metrics, "ns")
 	if response, err := c.Query(q);  err == nil{
-		if response.Error() != nil {
+		if err != nil {
 			fmt.Println("query error")
-			return res, response.Error()
+			return res, err
 		}
 		fmt.Println(response.Results)
 		res = response.Results
@@ -190,7 +164,7 @@ func decypher(command string) (s string,err error){
 }
 
 func getCredentials() (credential []string,err error) {
-	credential =  make([]string, 2)
+	credential =  make([]string, 3)
 	absPath, _ := filepath.Abs("influxdbUrl/credential.config")
 	file, err := os.Open(absPath)
 	if err != nil {
@@ -201,6 +175,7 @@ func getCredentials() (credential []string,err error) {
 	scanner := bufio.NewScanner(file)
 	username := ""
 	password := ""
+	dbUrl := ""
 	for scanner.Scan() {
 		line := scanner.Text()
 		if strings.Contains(line, "u=") {
@@ -209,6 +184,10 @@ func getCredentials() (credential []string,err error) {
 		}
 		if strings.Contains(line, "p=") {
 			password = line[2:]
+			continue;
+		}
+		if strings.Contains(line, "l=") {
+			dbUrl = line[2:]
 			continue;
 		}
 	}
@@ -223,7 +202,6 @@ func getCredentials() (credential []string,err error) {
 	}
 
 	realUsername,_ := decypher(username)
-
 	fmt.Println(realUsername)
 
 	if len(password) <= 0 {
@@ -233,8 +211,16 @@ func getCredentials() (credential []string,err error) {
 	realPassword,_ := decypher(password)
 	fmt.Println(realPassword)
 
+	if len(dbUrl) <=0 {
+		fmt.Println("no dbUrl")
+		return credential,errors.New("no dbUrl")
+	}
+	realUrl,_ := decypher(dbUrl)
+	fmt.Println(realUrl)
+
 	credential[0] = realUsername
 	credential[1] = realPassword
+	credential[2] = realUrl
 	return credential,nil
 }
 
