@@ -87,8 +87,14 @@ func influxDBHandler(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	log.Println(sql)
-	readInfluxDb(sql, metrics)
-
+	res,err := readInfluxDb(sql, metrics)
+	if err != nil {
+		return;
+	}
+	a, _ := json.Marshal(res)
+	rw.Write(a)
+	return;
+	//fmt.Fprintf(rw, "<h1>%s</h1><div>%s</div>", p.Title, p.Body)
 }
 
 func readInfluxDb(command string, metrics string) (res []client.Result, err error) {
