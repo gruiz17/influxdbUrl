@@ -18,8 +18,9 @@ If you have a username and password to encrypt.
 ```
 go run influxdbUrl/encryptionGenerator.go ${YOUR_USERNAME}
 go run influxdbUrl/encryptionGenerator.go ${YOUR_PASSWORD}
+go run influxdbUrl/encryptionGenerator.go ${YOUR_URL_TO_DATABASE}
 ```
-This will generate a encryted version of your username and password
+This will generate a encryted version of your username, password and databseUrl
 
 Copy and paste the result generated from the above program to credential.config
 
