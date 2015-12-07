@@ -21,7 +21,7 @@ go run influxdbUrl/encryptionGenerator.go ${YOUR_PASSWORD}
 go run influxdbUrl/encryptionGenerator.go ${YOUR_URL_TO_DATABASE}
 go run influxdbUrl/encryptionGenerator.go ${YOUR_DATABASE_NAME}
 ```
-This will generate a encryted version of your username, password and databseUrl
+This will generate a encryted version of your username, password, databseUrl and databaseName
 
 Copy and paste the result generated from the above program to credential.config, in the following format:
 ```
@@ -45,7 +45,7 @@ curl -H "Content-Type: application/json" -X POST -d "{\"pod_id\": \"sdfd\", \"ti
 ```
 
 On the server side, it will print the logs of sql command constructed.
-On the client side, it will print out the http response, it there are any
+On the client side, it will print out the http response, it there are any.
 
 After the above config, the last step is to change the file permmision of credential.config to read only
 ```

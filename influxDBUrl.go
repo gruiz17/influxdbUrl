@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"github.com/influxdb/influxdb/client/v2"
 	"github.com/gorilla/mux"
+	"encoding/json"
 )
 
 const(
@@ -30,7 +31,7 @@ func influxDBHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "your influxDB result:", r)
 
 	t := r.URL.String()
-	t = t [7:len(t)]
+	t = t [10:len(t)]
 	fmt.Fprintln(w, "t=" + t)
 
 	x,_ := url.QueryUnescape(t)
@@ -39,7 +40,10 @@ func influxDBHandler(w http.ResponseWriter, r *http.Request) {
 		slashIndex := strings.Index(x, "http:/") + 5
 		x = x[:slashIndex] + "/" + x[slashIndex:]
 	}
-	readInfluxDb(x);
+	res,_ := readInfluxDb(x);
+	a, _ := json.Marshal(res)
+	w.Write(a)
+	return;
 }
 
 
@@ -55,15 +59,16 @@ func readInfluxDb(command string) (res []client.Result, err error) {
 	sqlInput := ""
 	for k, _ := range elem{
 		if strings.HasPrefix(elem[k], "'http"){
+			fmt.Println("here")
 			urlInput = elem[k][1:len(elem[k]) - 1]
-			fmt.Println(urlInput)
+			fmt.Println("urlInput "+urlInput)
 			break;
 		}
 	}
 
 	if(strings.Contains(input, sqlTag)){
 		sqlInput = input [strings.Index(input, sqlTag)+2:len(input) - 1]
-		fmt.Println(sqlInput)
+		fmt.Println("sqlInput" + sqlInput)
 	}
 
 	if len(urlInput) <= 0 {
@@ -81,8 +86,9 @@ func readInfluxDb(command string) (res []client.Result, err error) {
 	tableName := ""
 	for k, _ := range sqlElem{
 		if strings.HasPrefix(sqlElem[k], "from"){
+			fmt.Println("here2")
 			tableName = sqlElem[k+1]
-			fmt.Println(tableName)
+			fmt.Println("tableName "+tableName)
 			break;
 		}
 	}
@@ -145,7 +151,7 @@ func readInfluxDb(command string) (res []client.Result, err error) {
 	}
 	defer c.Close()
 	
-	q := client.NewQuery(sqlInput, tableName, "ns")
+	q := client.NewQuery(sqlInput, "mydb", "ns")
 	if response, err := c.Query(q);  err == nil{
 		if response.Error() != nil {
 			fmt.Println("query error")
