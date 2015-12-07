@@ -94,7 +94,6 @@ func influxDBHandler(rw http.ResponseWriter, req *http.Request) {
 	a, _ := json.Marshal(res)
 	rw.Write(a)
 	return;
-	//fmt.Fprintf(rw, "<h1>%s</h1><div>%s</div>", p.Title, p.Body)
 }
 
 func readInfluxDb(command string, metrics string) (res []client.Result, err error) {
@@ -120,6 +119,11 @@ func readInfluxDb(command string, metrics string) (res []client.Result, err erro
 		fmt.Println("no dbURL")
 		return res, errors.New("no dbURL")
 	}
+
+	if len(credential[3]) <= 0 {
+		fmt.Println("no dbName")
+		return res, errors.New("no dbName")
+	}
 	// Make client
 	c, err := client.NewHTTPClient(client.HTTPConfig{
 		Addr: credential[2],
@@ -132,7 +136,7 @@ func readInfluxDb(command string, metrics string) (res []client.Result, err erro
 	}
 	defer c.Close()
 	
-	q := client.NewQuery(command, metrics, "ns")
+	q := client.NewQuery(command, credential[3], "ns")
 	if response, err := c.Query(q);  err == nil{
 		if err != nil {
 			fmt.Println("query error")
@@ -170,7 +174,7 @@ func decypher(command string) (s string,err error){
 }
 
 func getCredentials() (credential []string,err error) {
-	credential =  make([]string, 3)
+	credential =  make([]string, 4)
 	absPath, _ := filepath.Abs("influxdbUrl/credential.config")
 	file, err := os.Open(absPath)
 	if err != nil {
@@ -182,6 +186,7 @@ func getCredentials() (credential []string,err error) {
 	username := ""
 	password := ""
 	dbUrl := ""
+	dbName := ""
 	for scanner.Scan() {
 		line := scanner.Text()
 		if strings.Contains(line, "u=") {
@@ -194,6 +199,10 @@ func getCredentials() (credential []string,err error) {
 		}
 		if strings.Contains(line, "l=") {
 			dbUrl = line[2:]
+			continue;
+		}
+		if strings.Contains(line, "d=") {
+			dbName = line[2:]
 			continue;
 		}
 	}
@@ -224,9 +233,17 @@ func getCredentials() (credential []string,err error) {
 	realUrl,_ := decypher(dbUrl)
 	fmt.Println(realUrl)
 
+	if len(dbName) <=0 {
+		fmt.Println("no dbName")
+		return credential,errors.New("no dbName")
+	}
+	realDBName,_ := decypher(dbName)
+	fmt.Println(realDBName)
+
 	credential[0] = realUsername
 	credential[1] = realPassword
 	credential[2] = realUrl
+	credential[3] = realDBName
 	return credential,nil
 }
 
