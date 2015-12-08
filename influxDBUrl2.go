@@ -2,42 +2,41 @@ package main
 
 import (
 	"bufio"
-	"fmt"
-	"log"
-	"strings"
-	"net/http"
-	"github.com/influxdb/influxdb/client/v2"
 	"crypto/aes"
+	"crypto/cipher"
 	"encoding/hex"
 	"encoding/json"
-	"crypto/cipher"
 	"errors"
+	"fmt"
+	"github.com/influxdb/influxdb/client/v2"
+	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
-const(
-	influxDbTag = "/influxdbUrl"
-	portNum = "18080"
-	defaultStartTime = "1970-01-01 00:00:00.000"
-	timeLengthIndex int = 19
-	timeStampSuffix = ".000"
+const (
+	influxDbTag          = "/influxdbUrl"
+	portNum              = "18080"
+	defaultStartTime     = "1970-01-01 00:00:00.000"
+	timeLengthIndex  int = 19
+	timeStampSuffix      = ".000"
 )
 
 //Note: parameter name in this struct needs to start with upper case letter
 //Pod_id and Metric are required fields, the rest are optional
 type json_struct struct {
-	Pod_id string
+	Pod_id    string
 	TimeStart string
-	TimeEnd string
-	Limit int
-	Metric string
+	TimeEnd   string
+	Limit     int
+	Metric    string
 }
 
 var commonIV = []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f}
-
 
 func main() {
 	http.HandleFunc(influxDbTag, influxDBHandler)
@@ -46,7 +45,7 @@ func main() {
 
 func influxDBHandler(rw http.ResponseWriter, req *http.Request) {
 	decoder := json.NewDecoder(req.Body)
-	var t json_struct   
+	var t json_struct
 	err := decoder.Decode(&t)
 	if err != nil {
 		return
@@ -83,30 +82,30 @@ func influxDBHandler(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	if len(limitNum) > 0 {
-		sql += " LIMIT " +  limitNum
+		sql += " LIMIT " + limitNum
 	}
 
 	log.Println(sql)
-	res,err := readInfluxDb(sql, metrics)
+	res, err := readInfluxDb(sql, metrics)
 	if err != nil {
 		log.Println(err)
-		return;
+		return
 	}
 	log.Println(res)
 	a, err := json.Marshal(res)
 	if err != nil {
 		log.Println(err)
-		return;
+		return
 	}
 	rw.Write(a)
-	return;
+	return
 }
 
 func readInfluxDb(command string, metrics string) (res []client.Result, err error) {
-	credential,err := getCredentials()
+	credential, err := getCredentials()
 
-	if(err != nil){
-		return res,err
+	if err != nil {
+		return res, err
 	}
 
 	//test username and pw
@@ -132,7 +131,7 @@ func readInfluxDb(command string, metrics string) (res []client.Result, err erro
 	}
 	// Make client
 	c, err := client.NewHTTPClient(client.HTTPConfig{
-		Addr: credential[2],
+		Addr:     credential[2],
 		Username: credential[0],
 		Password: credential[1],
 	})
@@ -144,12 +143,12 @@ func readInfluxDb(command string, metrics string) (res []client.Result, err erro
 	//command = "select * from cpu/usage_ns_cumulative"
 	q := client.NewQuery(command, credential[3], "ns")
 	/*
-	q := client.Query{
-		Command: command,
-		Database: credential[3],
-	}
+		q := client.Query{
+			Command: command,
+			Database: credential[3],
+		}
 	*/
-	if response, err := c.Query(q);  err == nil{
+	if response, err := c.Query(q); err == nil {
 		if err != nil {
 			fmt.Println("query error")
 			return res, err
@@ -160,10 +159,10 @@ func readInfluxDb(command string, metrics string) (res []client.Result, err erro
 	return res, nil
 }
 
-func decypher(command string) (s string,err error){
+func decypher(command string) (s string, err error) {
 	key_text := "astaxie12798akljzmknm.ahkjkljl;k"
 
-	// Create the aes encryption algorithm 
+	// Create the aes encryption algorithm
 	c, err := aes.NewCipher([]byte(key_text))
 	if err != nil {
 		fmt.Printf("Error: NewCipher(%d bytes) = %s", len(key_text), err)
@@ -171,7 +170,7 @@ func decypher(command string) (s string,err error){
 	}
 
 	//fmt.Print("here1")
-	ciphertext2,_ := hex.DecodeString(command)
+	ciphertext2, _ := hex.DecodeString(command)
 	//fmt.Print("here2")
 	// Decrypt strings
 	cfbdec := cipher.NewCFBDecrypter(c, commonIV)
@@ -185,8 +184,8 @@ func decypher(command string) (s string,err error){
 	return s, nil
 }
 
-func getCredentials() (credential []string,err error) {
-	credential =  make([]string, 4)
+func getCredentials() (credential []string, err error) {
+	credential = make([]string, 4)
 	absPath, _ := filepath.Abs("influxdbUrl/credential.config")
 	file, err := os.Open(absPath)
 	if err != nil {
@@ -203,19 +202,19 @@ func getCredentials() (credential []string,err error) {
 		line := scanner.Text()
 		if strings.Contains(line, "u=") {
 			username = line[2:]
-			continue;
+			continue
 		}
 		if strings.Contains(line, "p=") {
 			password = line[2:]
-			continue;
+			continue
 		}
 		if strings.Contains(line, "l=") {
 			dbUrl = line[2:]
-			continue;
+			continue
 		}
 		if strings.Contains(line, "d=") {
 			dbName = line[2:]
-			continue;
+			continue
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -225,37 +224,36 @@ func getCredentials() (credential []string,err error) {
 	//test username and pw
 	if len(username) <= 0 {
 		fmt.Println("no username")
-		return credential,errors.New("no username")
+		return credential, errors.New("no username")
 	}
 
-	realUsername,_ := decypher(username)
+	realUsername, _ := decypher(username)
 	fmt.Println(realUsername)
 
 	if len(password) <= 0 {
 		fmt.Println("no password")
-		return credential,errors.New("no password")
+		return credential, errors.New("no password")
 	}
-	realPassword,_ := decypher(password)
+	realPassword, _ := decypher(password)
 	fmt.Println(realPassword)
 
-	if len(dbUrl) <=0 {
+	if len(dbUrl) <= 0 {
 		fmt.Println("no dbUrl")
-		return credential,errors.New("no dbUrl")
+		return credential, errors.New("no dbUrl")
 	}
-	realUrl,_ := decypher(dbUrl)
+	realUrl, _ := decypher(dbUrl)
 	fmt.Println(realUrl)
 
-	if len(dbName) <=0 {
+	if len(dbName) <= 0 {
 		fmt.Println("no dbName")
-		return credential,errors.New("no dbName")
+		return credential, errors.New("no dbName")
 	}
-	realDBName,_ := decypher(dbName)
+	realDBName, _ := decypher(dbName)
 	fmt.Println(realDBName)
 
 	credential[0] = realUsername
 	credential[1] = realPassword
 	credential[2] = realUrl
 	credential[3] = realDBName
-	return credential,nil
+	return credential, nil
 }
-
