@@ -68,10 +68,6 @@ func influxDBHandler(rw http.ResponseWriter, req *http.Request) {
 		log.Println("no metrics")
 		return
 	}
-	if len(podId) <= 0 {
-		log.Println("no pod_id")
-		return
-	}
 
 	if len(startTime) <= 0 {
 		startTime = defaultStartTime
@@ -81,17 +77,27 @@ func influxDBHandler(rw http.ResponseWriter, req *http.Request) {
 		x := time.Now().String()
 		endTime = x[:timeLengthIndex] + timeStampSuffix
 	}
-	sql := "SELECT * FROM '" + metrics + "' WHERE time >= '" + startTime + "' AND time <='" + endTime + "' AND pod_id='" + podId + "'"
-	if len(limitNum) <= 0 {
+	sql := "SELECT * FROM '" + metrics + "' WHERE time >= '" + startTime + "' AND time <='" + endTime + "'"
+	if len(podId) > 0 {
+		sql += "AND pod_id='" + podId + "'"
+	}
+
+	if len(limitNum) > 0 {
 		sql += " LIMIT " +  limitNum
 	}
 
 	log.Println(sql)
 	res,err := readInfluxDb(sql, metrics)
 	if err != nil {
+		log.Println(err)
 		return;
 	}
-	a, _ := json.Marshal(res)
+	log.Println(res)
+	a, err := json.Marshal(res)
+	if err != nil {
+		log.Println(err)
+		return;
+	}
 	rw.Write(a)
 	return;
 }
@@ -132,11 +138,17 @@ func readInfluxDb(command string, metrics string) (res []client.Result, err erro
 	})
 	if err != nil {
 		fmt.Println("Error connecting InfluxDB Client: ", err.Error())
-		return res, nil
+		return res, err
 	}
 	defer c.Close()
-	
+	//command = "select * from cpu/usage_ns_cumulative"
 	q := client.NewQuery(command, credential[3], "ns")
+	/*
+	q := client.Query{
+		Command: command,
+		Database: credential[3],
+	}
+	*/
 	if response, err := c.Query(q);  err == nil{
 		if err != nil {
 			fmt.Println("query error")
